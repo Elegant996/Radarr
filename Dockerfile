@@ -1,6 +1,4 @@
-ARG ALPINE_IMAGE=alpine:latest
-
-FROM ${ALPINE_IMAGE} as stage
+FROM alpine:3.19 as stage
 
 ARG BRANCH
 ARG VERSION
@@ -13,7 +11,7 @@ RUN curl -o /tmp/radarr.tar.gz -sL "https://radarr.servarr.com/v1/update/${BRANC
 RUN tar xzf /tmp/radarr.tar.gz -C /opt/Radarr --strip-components=1
 RUN rm -rf /opt/Radarr/Radarr.Update /tmp/*
 
-FROM ${ALPINE_IMAGE} as mirror
+FROM alpine:3.19 as mirror
 
 RUN mkdir -p /out/etc/apk && cp -r /etc/apk/* /out/etc/apk/
 RUN apk add --no-cache --initdb -p /out \
