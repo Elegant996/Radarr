@@ -1,13 +1,13 @@
 FROM alpine:3.19 as stage
 
-ARG BRANCH
+ARG PACKAGE
 ARG VERSION
 
 RUN apk add --no-cache \
     curl \
     xz
 RUN mkdir -p /opt/Radarr
-RUN curl -o /tmp/radarr.tar.gz -sL "https://radarr.servarr.com/v1/update/${BRANCH}/updatefile?version=${VERSION}&os=linuxmusl&runtime=netcore&arch=x64"
+RUN curl -o /tmp/radarr.tar.gz -sL "${PACKAGE}"
 RUN tar xzf /tmp/radarr.tar.gz -C /opt/Radarr --strip-components=1
 RUN rm -rf /opt/Radarr/Radarr.Update /tmp/*
 
@@ -38,6 +38,9 @@ ENV HOME /data
 WORKDIR $HOME
 CMD ["/opt/Radarr/Radarr", "-nobrowser", "-data=/data"]
 
-LABEL org.opencontainers.image.source="https://github.com/Radarr/Radarr"
 LABEL org.opencontainers.image.description="A fork of Sonarr to work with movies à la Couchpotato."
 LABEL org.opencontainers.image.licenses="GPL-3.0-only"
+LABEL org.opencontainers.image.source="https://github.com/Radarr/Radarr"
+LABEL org.opencontainers.image.title="Radarr"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.url="https://radarr.video/"
