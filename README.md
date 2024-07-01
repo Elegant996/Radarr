@@ -5,6 +5,14 @@ Docker
 -----------------------------------------------
 This repo will periodically check Radarr for updates and build a container image from scratch using an Alpine base layout:
 
+For `master` branch releases use:
 ```
-docker pull ghcr.io/elegant996/radarr:latest
+docker pull ghcr.io/elegant996/radarr:5.7.0.8882
+docker pull ghcr.io/elegant996/radarr:master
+```
+
+For `develop` branch pre-releases use:
+```
+docker pull ghcr.io/elegant996/radarr:5.8.0.8897
+docker pull ghcr.io/elegant996/radarr:develop
 ```
