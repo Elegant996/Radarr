@@ -42,5 +42,5 @@ LABEL org.opencontainers.image.description="A fork of Sonarr to work with movies
 LABEL org.opencontainers.image.licenses="GPL-3.0-only"
 LABEL org.opencontainers.image.source="https://github.com/Radarr/Radarr"
 LABEL org.opencontainers.image.title="Radarr"
-LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.version=${VERSION}
 LABEL org.opencontainers.image.url="https://radarr.video/"
