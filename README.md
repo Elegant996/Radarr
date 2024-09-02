@@ -7,7 +7,7 @@ This repo will periodically check Radarr for updates and build a container image
 
 For `master` branch releases use:
 ```
-docker pull ghcr.io/elegant996/radarr:5.10.0.9090
+docker pull ghcr.io/elegant996/radarr:5.10.1.9125
 docker pull ghcr.io/elegant996/radarr:master
 ```
 
