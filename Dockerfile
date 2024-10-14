@@ -1,20 +1,14 @@
-FROM alpine:3.20 as stage
+FROM scratch AS source
 
-ARG PACKAGE
-ARG VERSION
+ADD ./radarr.tar.gz /
 
-RUN apk add --no-cache \
-    curl \
-    xz
-RUN mkdir -p /opt/Radarr
-RUN curl -o /tmp/radarr.tar.gz -sL "${PACKAGE}"
-RUN tar xzf /tmp/radarr.tar.gz -C /opt/Radarr --strip-components=1
-RUN rm -rf /opt/Radarr/Radarr.Update /tmp/*
+FROM alpine:3.20 AS build-sysroot
 
-FROM alpine:3.20 as mirror
+# Prepare sysroot
+RUN mkdir -p /sysroot/etc/apk && cp -r /etc/apk/* /sysroot/etc/apk/
 
-RUN mkdir -p /out/etc/apk && cp -r /etc/apk/* /out/etc/apk/
-RUN apk add --no-cache --initdb -p /out \
+# Fetch runtime dependencies
+RUN apk add --no-cache --initdb -p /sysroot \
     alpine-baselayout \
     busybox \
     gettext-libs \
@@ -23,20 +17,28 @@ RUN apk add --no-cache --initdb -p /out \
     libmediainfo \
     sqlite-libs \
     tzdata
-RUN rm -rf /out/etc/apk /out/lib/apk /out/var/cache
+RUN rm -rf /sysroot/etc/apk /sysroot/lib/apk /sysroot/var/cache
 
+# Install Radarr to new system root
+RUN mkdir -p /sysroot/opt/Radarr
+COPY --from=source /Radarr /sysroot/opt/Radarr
+RUN rm -rf /sysroot/opt/Radarr/Radarr.Update
+
+# Install entrypoint
+COPY --chmod 755 ./entrypoint.sh /sysroot/entrypoint.sh
+
+# Build image
 FROM scratch
-ENTRYPOINT []
-CMD []
-WORKDIR /
-COPY --from=mirror /out/ /
-COPY --from=stage /opt/Radarr /opt/Radarr/
+COPY --from=build-sysroot /sysroot/ /
 
 EXPOSE 7878 8787
 VOLUME [ "/data" ]
-ENV HOME /data
+ENV HOME=/data
 WORKDIR $HOME
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/opt/Radarr/Radarr", "-nobrowser", "-data=/data"]
+
+ARG VERSION
 
 LABEL org.opencontainers.image.description="A fork of Sonarr to work with movies à la Couchpotato."
 LABEL org.opencontainers.image.licenses="GPL-3.0-only"
