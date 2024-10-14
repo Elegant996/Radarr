@@ -4,7 +4,7 @@ on:
 
   # Hourly
   schedule:
-    - cron:  '0 * * * *'
+    - cron:  '0 0 * * *'
 
   # Manually
   workflow_dispatch:
@@ -21,8 +21,7 @@ jobs:
     needs: 
     - masterPoll
     with:
-      existingTag: '${{ needs.masterPoll.outputs.latestTag }}'
-      releaseVersion: '${{ needs.masterPoll.outputs.upstreamVersion }}'
+      upstreamVersion: '${{ needs.masterPoll.outputs.upstreamVersion }}'
 
   developPoll:
     name: 'Check develop branch'
@@ -40,5 +39,4 @@ jobs:
     - developPoll
     with:
       branch: 'develop'
-      existingTag: '${{ needs.developPoll.outputs.latestTag }}'
-      releaseVersion: '${{ needs.developPoll.outputs.upstreamVersion }}'
+      upstreamVersion: '${{ needs.developPoll.outputs.upstreamVersion }}'
