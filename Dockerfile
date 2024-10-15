@@ -25,7 +25,7 @@ COPY --from=source /Radarr /sysroot/opt/Radarr
 RUN rm -rf /sysroot/opt/Radarr/Radarr.Update
 
 # Install entrypoint
-COPY --chmod 755 ./entrypoint.sh /sysroot/entrypoint.sh
+COPY --chmod=755 ./entrypoint.sh /sysroot/entrypoint.sh
 
 # Build image
 FROM scratch
