@@ -117,6 +117,13 @@ jobs:
           Changes in this Release: 
           ${{ steps.changelog.outputs.changelog }}
 
+    - name: Generate a token
+      id: generate_token
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ secrets.APP_ID }}
+        private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
     - name: Update repository variables
       run: |
         gh variable set LATEST_VERSION --body "${{ inputs.upstreamVersion }}"
@@ -126,4 +133,4 @@ jobs:
           gh variable set PRERELEASE_VERSION --body "${{ inputs.upstreamVersion }}"
         fi
       env:
-        GH_TOKEN: ${{ github.token }}
+        GH_TOKEN: ${{ steps.generate_token.outputs.token }}
