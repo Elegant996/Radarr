@@ -26,6 +26,7 @@ jobs:
   developPoll:
     name: 'Check develop branch'
     uses: ./.github/workflows/poll_releases.yml
+    if: ${{ needs.masterPoll.outputs.updateRequired == 'false' }}
     needs:
     - masterPoll
     with:

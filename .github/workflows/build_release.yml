@@ -126,4 +126,4 @@ jobs:
           gh variable set PRERELEASE_VERSION --body "${{ inputs.upstreamVersion }}"
         fi
       env:
-        GH_TOKEN: ${{ secrets.VARS_PAT }}
+        GH_TOKEN: ${{ secrets.PAT }}
