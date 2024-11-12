@@ -13,6 +13,7 @@ jobs:
   masterPoll:
     name: 'Poll master branch'
     uses: ./.github/workflows/poll_releases.yml
+    secrets: inherit
 
   masterBuild:
     name: 'Build master branch'
@@ -22,6 +23,7 @@ jobs:
     - masterPoll
     with:
       upstreamVersion: '${{ needs.masterPoll.outputs.upstreamVersion }}'
+    secrets: inherit
 
   developPoll:
     name: 'Check develop branch'
@@ -31,6 +33,7 @@ jobs:
     - masterPoll
     with:
       branch: 'develop'
+    secrets: inherit
 
   developBuild:
     name: 'Build develop branch'
@@ -41,3 +44,4 @@ jobs:
     with:
       branch: 'develop'
       upstreamVersion: '${{ needs.developPoll.outputs.upstreamVersion }}'
+    secrets: inherit
