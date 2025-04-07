@@ -2,7 +2,7 @@ name: New release check
 on:
   push:
 
-  # Hourly
+  # Daily
   schedule:
     - cron:  '0 0 * * *'
 
