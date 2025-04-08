@@ -133,11 +133,11 @@ jobs:
         id: tags
         run: |
           if [ -z "${release_version}" ] && [ -z "${prerelease_version}" ]; then
-            echo 'matrix={"include":[{"tag":"v${{ env.release_version }}","version":"${{ env.release_version }}","branch":"${{ env.release_branch }}","prerelease":"false"},{"tag":"v${{ env.prerelease_version }}","version":"${{ env.prerelease_version }}","branch":"${{ env.prerelease_branch }}","prerelease":"true"}]}' >> $GITHUB_OUTPUT
+            echo 'matrix=[{"tag":"v${{ env.release_version }}","version":"${{ env.release_version }}","branch":"${{ env.release_branch }}","prerelease":"false"},{"tag":"v${{ env.prerelease_version }}","version":"${{ env.prerelease_version }}","branch":"${{ env.prerelease_branch }}","prerelease":"true"}]' >> $GITHUB_OUTPUT
           elif [ -z "${prerelease_version}" ]; then
-            echo 'matrix={"include":[{"tag":"v${{ env.release_version }}","version":"${{ env.release_version }}","branch":"${{ env.release_branch }}","prerelease":"false"}' >> $GITHUB_OUTPUT
+            echo 'matrix=[{"tag":"v${{ env.release_version }}","version":"${{ env.release_version }}","branch":"${{ env.release_branch }}","prerelease":"false"}]' >> $GITHUB_OUTPUT
           elif [ -z "${release_version}" ]; then
-            echo 'matrix={"include":[{"tag":"v${{ env.prerelease_version }}","version":"${{ env.prerelease_version }}","branch":"${{ env.prerelease_branch }}","prerelease":"true"}]}' >> $GITHUB_OUTPUT
+            echo 'matrix=[{"tag":"v${{ env.prerelease_version }}","version":"${{ env.prerelease_version }}","branch":"${{ env.prerelease_branch }}","prerelease":"true"}]' >> $GITHUB_OUTPUT
           else
             echo "There is no GitHub tag reference, skipping"
           fi
@@ -156,7 +156,8 @@ jobs:
       contents: write
 
     strategy:
-      matrix: ${{ fromJSON(needs.commit-and-push.outputs.tags) }}
+      matrix:
+        include: ${{ fromJSON(needs.commit-and-push.outputs.tags) }}
       max-parallel: 1
       fail-fast: true
 
@@ -205,7 +206,9 @@ jobs:
 
 
     strategy:
-      matrix: ${{ fromJSON(needs.commit-and-push.outputs.tags) }}
+      matrix:
+        arch: ["amd64"]
+        include: ${{ fromJSON(needs.commit-and-push.outputs.tags) }}
       max-parallel: 1
       fail-fast: true
 
