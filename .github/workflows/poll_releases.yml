@@ -22,7 +22,7 @@ jobs:
         run: |
           echo 'matrix={"include":[{"branch":"master","prerelease":"false"},{"branch":"develop","prerelease":"true"}]}' >> $GITHUB_OUTPUT
 
-  check-upstream:
+  upstream-pull-request:
     name: Check upstream version
     runs-on: ubuntu-latest
     needs:
@@ -30,29 +30,32 @@ jobs:
 
     permissions:
       contents: write
+      pull-requests: write
 
     strategy:
       matrix: ${{ fromJSON(needs.define-matrix.outputs.branches) }}
       fail-fast: true
 
-    outputs:
-      release_branch: ${{ steps.releases.outputs.release_branch }}
-      release_version: ${{ steps.releases.outputs.release_version }}
-      prerelease_branch: ${{ steps.releases.outputs.prerelease_branch }}
-      prerelease_version: ${{ steps.releases.outputs.prerelease_version }}
-
     steps:
+      - name: Get repository name
+        id: repo
+        run: |
+          repo_name="${{ github.event.repository.name }}"
+          echo "repo_name=${repo_name,,}" >> $GITHUB_OUTPUT
+
       - name: Get upstream (pre)release
         id: upstream
         run: |
-          TAG=$(curl -sL --request GET \
+          read tag, url < <(echo $(curl -sL --request GET \
             --url "${{ github.api_url }}/repos/Radarr/Radarr/releases" \
             --header "Accept: application/vnd.github+json" \
             --header "Authorization: token ${{ github.token }}" \
             | jq --argjson pr ${{ matrix.prerelease }} \
-            -r 'map(select(.prerelease==$pr)) | first | .tag_name')
+            -r 'map(select(.prerelease==$pr)) | first | \
+            .tag_name, .html_url'))
 
-          echo "version=${TAG//v}" >> $GITHUB_OUTPUT
+          echo "version=${tag//v}" >> $GITHUB_OUTPUT
+          echo "url=${url}" >> $GITHUB_OUTPUT
 
       - name: Check if tag exists
         uses: mukunku/tag-exists-action@v1.6.0
@@ -60,91 +63,42 @@ jobs:
         with:
           tag: 'v${{ steps.upstream.outputs.version }}'
 
-      - name: Store releases
-        id: releases
-        run: |
-            echo "${prerelease}_branch=${{ matrix.branch }}" >> "$GITHUB_OUTPUT"
-            echo "${prerelease}_version=${version}" >> "$GITHUB_OUTPUT"
-        env:
-          prerelease: ${{ !fromJSON(matrix.prerelease) && 'release' || 'prerelease' }}
-          version: ${{ !fromJSON(steps.check_tag.outputs.exists) && steps.upstream.outputs.version || '' }}
-
-  commit-and-push:
-    name: Push commits and release upstream version
-    runs-on: ubuntu-latest
-    needs:
-      - check-upstream
-
-    permissions:
-      contents: write
-
-    outputs:
-      tags: ${{ steps.tags.outputs.matrix }}
-
-    # Cannot use matrix in this instance
-    env:
-      release_branch: ${{ needs.check-upstream.outputs.release_branch }}
-      release_version: ${{ needs.check-upstream.outputs.release_version }}
-      prerelease_branch: ${{ needs.check-upstream.outputs.prerelease_branch }}
-      prerelease_version: ${{ needs.check-upstream.outputs.prerelease_version }}
-
-    steps:
-      - uses: actions/checkout@v4
-    
-      - name: Update Readme (release)
-        if: ${{ env.release_version != '' }}
+      - name: Update Readme
+        if: ${{ !fromJSON(steps.check_tag.outputs.exists }}
         uses: jacobtomlinson/gha-find-replace@v3
         with:
           find: ${{ vars.RELEASE_VERSION }}
-          replace: ${{ env.release_version }}
+          replace: ${{ steps.upstream.outputs.version }}
           include: 'README.md'
           regex: false
 
-      - name: Commit changes (release)
-        if: ${{ env.release_version != '' }}
-        uses: EndBug/add-and-commit@v9
+      - name: Create pull request
+        if: ${{ !fromJSON(steps.check_tag.outputs.exists }}
+        uses: peter-evans/create-pull-request@v7
         with:
-          committer_name: GitHub Actions
-          committer_email: actions@github.com
-          message: 'docs: Bump ${{ env.release_branch }} image version to ${{ env.release_version }}'
-          push: false
-          tag: 'v${{ env.release_version }}'
+          token: ${{ secrets.PR_CREATE_TOKEN }}
+          add-paths: |
+            README.md
+          commit-message: |
+            docs: Bump ${{ matrix.branch }} image version to ${{ steps.upstream.outputs.version }}
+          title: "docs: Bump ${{ matrix.branch }} image version to ${{ steps.upstream.outputs.version }}"
+          body: |
+            ## Upstream release
+            [1]: ${{ steps.upstream.outputs.url }}
+          branch: ${{ steps.repo.outputs.repo_name }}-pull
+          delete-branch: true
+          branch-suffix: short-commit-hash
 
-      - name: Update Readme (prerelease)
-        if: ${{ env.prerelease_version != '' }}
-        uses: jacobtomlinson/gha-find-replace@v3
-        with:
-          find: ${{ vars.PRERELEASE_VERSION }}
-          replace: ${{ env.prerelease_version }}
-          include: 'README.md'
-          regex: false
-
-      - name: Commit changes (prerelease)
-        if: ${{ env.prerelease_version != '' }}
-        uses: EndBug/add-and-commit@v9
-        with:
-          committer_name: GitHub Actions
-          committer_email: actions@github.com
-          message: 'docs: Bump ${{ env.prerelease_branch }} image version to ${{ env.prerelease_version }}'
-          push: false
-          tag: 'v${{ env.prerelease_version }}'
-
-      - name: Define tags
-        id: tags
+      - name: Update repository variables
+        if: ${{ !fromJSON(steps.check_tag.outputs.exists }}
         run: |
-          if [ -z "${release_version}" ] && [ -z "${prerelease_version}" ]; then
-            echo 'matrix=[{"tag":"v${{ env.release_version }}","version":"${{ env.release_version }}","branch":"${{ env.release_branch }}","prerelease":"false"},{"tag":"v${{ env.prerelease_version }}","version":"${{ env.prerelease_version }}","branch":"${{ env.prerelease_branch }}","prerelease":"true"}]' >> $GITHUB_OUTPUT
-          elif [ -z "${prerelease_version}" ]; then
-            echo 'matrix=[{"tag":"v${{ env.release_version }}","version":"${{ env.release_version }}","branch":"${{ env.release_branch }}","prerelease":"false"}]' >> $GITHUB_OUTPUT
-          elif [ -z "${release_version}" ]; then
-            echo 'matrix=[{"tag":"v${{ env.prerelease_version }}","version":"${{ env.prerelease_version }}","branch":"${{ env.prerelease_branch }}","prerelease":"true"}]' >> $GITHUB_OUTPUT
+          if [[ !${{ fromJSON(matrix.prerelease) }} ]]; then
+            gh variable set RELEASE_VERSION --body "${{ matrix.version }}"
           else
-            echo "There is no GitHub tag reference, skipping"
+            gh variable set PRERELEASE_VERSION --body "${{ matrix.version }}"
           fi
-
-      - name: Push commits
-        run: |
-          git push
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
 
   publish-release:
     name: Publish releases
