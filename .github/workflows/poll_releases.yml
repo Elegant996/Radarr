@@ -49,8 +49,8 @@ jobs:
             --url "${{ github.api_url }}/repos/Radarr/Radarr/releases" \
             --header "Accept: application/vnd.github+json" \
             --header "Authorization: token ${{ github.token }}" \
-            | jq --argjson DEVELOP ${{ matrix.prerelease }} \
-            -r 'map(select(.prerelease==$DEVELOP)) | first | .tag_name')
+            | jq --argjson pr ${{ matrix.prerelease }} \
+            -r 'map(select(.prerelease==$pr)) | first | .tag_name')
 
           echo "version=${TAG//v}" >> $GITHUB_OUTPUT
 
@@ -170,7 +170,7 @@ jobs:
         with:
           mytoken: ${{ github.token }}
           head-ref: ${{ matrix.tag }}
-          base-ref: v${{ !fromJSON(matrix.prerelease) && vars.PRERELEASE_VERSION || '' }}
+          base-ref: v${{ !fromJSON(matrix.prerelease) && join(['v', vars.PRERELEASE_VERSION], '') || '' }}
 
       - name: Publish release
         uses: ncipollo/release-action@v1
