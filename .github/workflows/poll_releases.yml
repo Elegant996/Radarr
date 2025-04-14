@@ -9,6 +9,9 @@ on:
   # Manually
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   define-matrix:
     runs-on: ubuntu-latest
@@ -25,15 +28,11 @@ jobs:
   check-upstream:
     name: Check upstream version
     runs-on: ubuntu-latest
-    needs:
-      - define-matrix
-
-    permissions:
-      contents: write
+    needs: [define-matrix]
 
     strategy:
-      matrix: ${{ fromJSON(needs.define-matrix.outputs.branches) }}
       fail-fast: true
+      matrix: ${{ fromJSON(needs.define-matrix.outputs.branches) }}
 
     outputs:
       release_branch: ${{ steps.releases.outputs.release_branch }}
@@ -72,11 +71,7 @@ jobs:
   commit-and-push:
     name: Push commits and release upstream version
     runs-on: ubuntu-latest
-    needs:
-      - check-upstream
-
-    permissions:
-      contents: write
+    needs: [check-upstream]
 
     outputs:
       tags: ${{ steps.tags.outputs.matrix }}
@@ -149,17 +144,13 @@ jobs:
   publish-release:
     name: Publish releases
     runs-on: ubuntu-latest
-    needs:
-      - commit-and-push
-
-    permissions:
-      contents: write
+    needs: [commit-and-push]
 
     strategy:
+      fail-fast: true
+      max-parallel: 1
       matrix:
         include: ${{ fromJSON(needs.commit-and-push.outputs.tags) }}
-      max-parallel: 1
-      fail-fast: true
 
     steps:
       - uses: actions/checkout@v4
@@ -170,7 +161,9 @@ jobs:
         with:
           mytoken: ${{ github.token }}
           head-ref: ${{ matrix.tag }}
-          base-ref: v${{ !fromJSON(matrix.prerelease) && join(['v', vars.PRERELEASE_VERSION], '') || '' }}
+          base-ref: ${{ !fromJSON(matrix.prerelease) && env.prerelease-tag || '' }}
+        env:
+          prerelease-tag: 'v${{ vars.PRERELEASE_VERSION }}'
 
       - name: Publish release
         uses: ncipollo/release-action@v1
@@ -195,35 +188,37 @@ jobs:
   docker:
     name: Build images
     runs-on: ubuntu-latest
-    needs:
-      - commit-and-push
+    needs: [commit-and-push]
 
     permissions:
-      contents: write
       packages: write
 
-    strategy:
+    strategy:     
+      fail-fast: true
+      max-parallel: 1
       matrix:
         arch: ["amd64"]
         include: ${{ fromJSON(needs.commit-and-push.outputs.tags) }}
-      max-parallel: 1
-      fail-fast: true
 
     steps:
-      - name: Login to GitHub Container Registry
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ github.token }}
 
-      - name: Sanitize repo slug
-        uses: actions/github-script@v7
-        id: repo_slug
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          result-encoding: string
-          script: return '${{ github.repository }}'.toLowerCase()
-      
+          tags: |
+            type=raw,priority=900,value=${{ matrix.version }}
+          labels: |
+            org.opencontainers.image.url="https://radarr.video/"
+          flavor: |
+            suffix=-${{ matrix.branch }}
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ matrix.tag }}
@@ -244,16 +239,11 @@ jobs:
         continue-on-error: true
         id: buildx1
         with:
-          build-args: |
-            VERSION=${{ matrix.version }}${{ matrix.branch == 'develop' && '-dev' }}
           context: .
           platforms: linux/${{ matrix.arch }}
           push: true
-          tags: |
-            ghcr.io/${{ steps.repo_slug.outputs.result }}:${{ matrix.version }}-${{ matrix.branch }}
-            ghcr.io/${{ steps.repo_slug.outputs.result }}:${{ matrix.version }}
-            ghcr.io/${{ steps.repo_slug.outputs.result }}:${{ matrix.branch }}
-            ghcr.io/${{ steps.repo_slug.outputs.result }}:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
       # Temp workaround for failed builds
       - name: Wait to retry
@@ -266,13 +256,8 @@ jobs:
         uses: docker/build-push-action@v6
         if: steps.buildx1.outcome != 'success'
         with:
-          build-args: |
-            VERSION=${{ matrix.version }}${{ matrix.branch == 'develop' && '-dev' }}
           context: .
           platforms: linux/${{ matrix.arch }}
           push: true
-          tags: |
-            ghcr.io/${{ steps.repo_slug.outputs.result }}:${{ matrix.version }}-${{ matrix.branch }}
-            ghcr.io/${{ steps.repo_slug.outputs.result }}:${{ matrix.version }}
-            ghcr.io/${{ steps.repo_slug.outputs.result }}:${{ matrix.branch }}
-            ghcr.io/${{ steps.repo_slug.outputs.result }}:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

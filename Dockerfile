@@ -37,12 +37,3 @@ ENV HOME=/data
 WORKDIR $HOME
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/opt/Radarr/Radarr", "-nobrowser", "-data=/data"]
-
-ARG VERSION
-
-LABEL org.opencontainers.image.description="A fork of Sonarr to work with movies à la Couchpotato."
-LABEL org.opencontainers.image.licenses="GPL-3.0-only"
-LABEL org.opencontainers.image.source="https://github.com/Radarr/Radarr"
-LABEL org.opencontainers.image.title="Radarr"
-LABEL org.opencontainers.image.version=${VERSION}
-LABEL org.opencontainers.image.url="https://radarr.video/"
