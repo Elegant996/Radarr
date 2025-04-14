@@ -87,7 +87,7 @@ jobs:
       - uses: actions/checkout@v4
     
       - name: Update Readme (release)
-        if: ${{ env.release_version != '' }}
+        if: env.release_version != ''
         uses: jacobtomlinson/gha-find-replace@v3
         with:
           find: ${{ vars.RELEASE_VERSION }}
@@ -96,7 +96,7 @@ jobs:
           regex: false
 
       - name: Commit changes (release)
-        if: ${{ env.release_version != '' }}
+        if: env.release_version != ''
         uses: EndBug/add-and-commit@v9
         with:
           committer_name: GitHub Actions
@@ -106,7 +106,7 @@ jobs:
           tag: 'v${{ env.release_version }}'
 
       - name: Update Readme (prerelease)
-        if: ${{ env.prerelease_version != '' }}
+        if: env.prerelease_version != ''
         uses: jacobtomlinson/gha-find-replace@v3
         with:
           find: ${{ vars.PRERELEASE_VERSION }}
@@ -115,7 +115,7 @@ jobs:
           regex: false
 
       - name: Commit changes (prerelease)
-        if: ${{ env.prerelease_version != '' }}
+        if: env.prerelease_version != ''
         uses: EndBug/add-and-commit@v9
         with:
           committer_name: GitHub Actions
