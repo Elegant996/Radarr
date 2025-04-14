@@ -224,6 +224,7 @@ jobs:
           tags: |
             type=raw,priority=900,value=${{ matrix.version }}
           labels: |
+            org.opencontainers.image.source="https://github.com/Radarr/Radarr"
             org.opencontainers.image.url="https://radarr.video/"
           flavor: |
             suffix=-${{ matrix.branch }}
