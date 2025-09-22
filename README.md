@@ -13,6 +13,6 @@ docker pull ghcr.io/elegant996/radarr:master
 
 For `develop` branch pre-releases use:
 ```
-docker pull ghcr.io/elegant996/radarr:5.28.0.10205
+docker pull ghcr.io/elegant996/radarr:6.0.0.10217
 docker pull ghcr.io/elegant996/radarr:develop
 ```
