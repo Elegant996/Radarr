@@ -2,7 +2,7 @@ FROM scratch AS source
 
 ADD ./radarr.tar.gz /
 
-FROM alpine:3.21 AS build-sysroot
+FROM alpine:3.23 AS build-sysroot
 
 # Prepare sysroot
 RUN mkdir -p /sysroot/etc/apk && cp -r /etc/apk/* /sysroot/etc/apk/
@@ -11,6 +11,7 @@ RUN mkdir -p /sysroot/etc/apk && cp -r /etc/apk/* /sysroot/etc/apk/
 RUN apk add --no-cache --initdb -p /sysroot \
     alpine-baselayout \
     busybox \
+    dumb-init \
     gettext-libs \
     icu-libs \
     libcurl \
@@ -35,5 +36,5 @@ EXPOSE 7878 8787
 VOLUME [ "/data" ]
 ENV HOME=/data
 WORKDIR $HOME
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--", "/entrypoint.sh"]
 CMD ["/opt/Radarr/Radarr", "-nobrowser", "-data=/data"]
